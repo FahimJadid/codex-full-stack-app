@@ -11,11 +11,12 @@ const OTPSchema = new Schema({
   otp: {
     type: String,
     required: true,
+    unique: true,
   },
   createdAt: {
     type: Date,
     default: Date.now(),
-    expires: 5 * 60,
+    expires: 3 * 60,
   },
 });
 
