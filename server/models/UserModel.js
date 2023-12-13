@@ -34,6 +34,12 @@ const userSchema = new Schema({
     ref: "Profile",
     require: true,
   },
+  token: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
   courses: [
     {
       type: mongoose.Schema.Types.ObjectId,
