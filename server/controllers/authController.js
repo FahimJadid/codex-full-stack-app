@@ -1,8 +1,11 @@
 const User = require("../models/UserModel");
+const Profile = require("../models/ProfileModel");
 const OTP = require("../models/OTPModel");
 const validator = require("validator");
 const bcrypt = require("bcrypt");
 const otpGenerator = require("otp-generator");
+const jwt = require("jsonwebtoken");
+
 // Send OTP
 
 exports.sendOTP = async (req, res) => {
@@ -187,6 +190,78 @@ exports.signup = async (req, res) => {
     });
   }
 };
+
 // Login
+exports.login = async (req, res) => {
+  try {
+    // get data from req.body
+    const { email, password } = req.body;
+
+    // data validation
+    if (!email || !password) {
+      return res.status(403).json({
+        success: false,
+        message: "Please enter valid email & password",
+      });
+    }
+    // user check exist or not
+    const user = await User.findOne({ email }).populate("additionalDetails");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User does not exists, please Sign Up first",
+      });
+    }
+    // after matching the password, generate JWT
+    if (await bcrypt.compare(password, user.password)) {
+      const payload = {
+        email: user.email,
+        id: user._id,
+        role: user.role,
+      };
+      const token = jwt.sign(payload, process.env.JWT_SECRET, {
+        expiresIn: "2h",
+      });
+      user.token = token;
+      user.password = undefined; // removed password from user object for security
+
+      // create cookie and send response
+      const options = {
+        expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+      };
+      // cookie create
+      res.cookie("token", token, options).status(200).json({
+        success: true,
+        token,
+        user,
+        message: "Logged in Successfully...",
+      });
+
+      //
+    } else {
+      // password do not match
+      return res.status(403).json({
+        success: false,
+        message: "Incorrect Email & Password",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Login Failed! Please try again...",
+    });
+  }
+};
 
 // Change Password
+exports.changePassword = async (req, res) => {
+  // get data from req.body
+  // get oldpass, newPass, confirmPass
+  // validation
+  // update Pass in DB
+  // send mail - password Updated
+  // return response
+};
