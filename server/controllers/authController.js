@@ -5,7 +5,7 @@ const validator = require("validator");
 const bcrypt = require("bcrypt");
 const otpGenerator = require("otp-generator");
 const jwt = require("jsonwebtoken");
-
+const mailService = require("../utils/mailService");
 // Send OTP
 
 exports.sendOTP = async (req, res) => {
@@ -258,10 +258,66 @@ exports.login = async (req, res) => {
 
 // Change Password
 exports.changePassword = async (req, res) => {
-  // get data from req.body
-  // get oldpass, newPass, confirmPass
-  // validation
-  // update Pass in DB
-  // send mail - password Updated
-  // return response
+  try {
+    // get data from req.body
+    // get oldpass, newPass, confirmPass
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    // validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).send({ message: "New passwords do not match." });
+    }
+
+    // update Pass in DB
+    const user = await User.findOne(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // compare old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid old password",
+      });
+    }
+
+    // hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // update password in the database
+    user.password = hashedNewPassword;
+    await user.save();
+
+    // send mail - password Updated
+    // send mail containing the URL
+    await mailService(
+      user.email,
+      "Password Updated",
+      `Your password has been updated`
+    );
+    // return response
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to change password",
+    });
+  }
 };
