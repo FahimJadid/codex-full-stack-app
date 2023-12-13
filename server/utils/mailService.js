@@ -28,6 +28,7 @@ const mailService = async (email, title, body) => {
     //
   } catch (error) {
     console.error(error);
+    throw error;
   }
 };
 
